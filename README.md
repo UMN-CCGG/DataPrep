@@ -68,7 +68,7 @@ Singularity settings in config.yml
 
 First, activate the virtual environment into which snakemake was installed:
 
-    conda activate <environment_name>
+    conda activate <your_environment_name>
 
 Clone the parent repository to the location where you want to store the output of the pipeline.
 
@@ -91,7 +91,7 @@ The entire pipeline can be executed on a local machine (not recommended) or on a
 
 However, multiple steps in the pipeline have high resource demands, and so are unlikely to be able to be run locally.  This option exists primarily for testing and troubleshooting, so the remainder of the  documentation assumes that the pipeline will be executed on an HPC.  In order to coordinate the use of the HPC, the following modifications to the snakemake command are required:
 
-    snakemake --cluster "sbatch --no-requeue --partition={cluster.p} --time={cluster.time} --mem={cluster.mem} --ntasks={threads} --nodes={cluster.nodes} --mail-user={cluster.mail-user} --mail-type={cluster.mail-type} -o {cluster.o} -e {cluster.e} -A {cluster.A}" --cluster-config workflow/cluster_yale.yaml -j 32
+    snakemake --cluster "sbatch --no-requeue --partition={cluster.p} --time={cluster.time} --mem={cluster.mem} --ntasks={threads} --nodes={cluster.nodes} --mail-user={cluster.mail-user} --mail-type={cluster.mail-type} -o {cluster.o} -e {cluster.e} -A {cluster.A}" --cluster-config workflow/cluster_slurm.yaml -j 32
 
 where -j specifies the number of jobs that can be submitted at once. 
 
@@ -112,7 +112,7 @@ One attractive feature of _snakemake_ is its ability to keep track of the progre
 
 To run a specific part of the pipeline, do:
 
-    snakemake -R <rule_name> --cluster "sbatch --no-requeue --partition={cluster.p} --time={cluster.time} --mem={cluster.mem} --ntasks={threads} --nodes={cluster.nodes} --mail-user={cluster.mail-user} --mail-type={cluster.mail-type} -o {cluster.o} -e {cluster.e} -A {cluster.A}" --cluster-config workflow/cluster_yale.yaml -j 20 --rerun-incomplete
+    snakemake -R <rule_name> --cluster "sbatch --no-requeue --partition={cluster.p} --time={cluster.time} --mem={cluster.mem} --ntasks={threads} --nodes={cluster.nodes} --mail-user={cluster.mail-user} --mail-type={cluster.mail-type} -o {cluster.o} -e {cluster.e} -A {cluster.A}" --cluster-config workflow/cluster_slurm.yaml -j 20 --rerun-incomplete
 
 where _rule\_name_ indicates the 'rule' (i.e. job) in the Snakefile that you wish to run.  Or, you can request a specific file by providing the filename at the end of the command.  You may need to include the -F (i.e. force) if the output file already exists and you want to overwrite it.
 
