@@ -61,7 +61,7 @@ if CHROMS == 'all':
 
 # Run locally or submit to cluster depending on config.yml
 plink_run_specs = {'__default__': ""} # Set default to empty string in case of local run.  i.e. default to plink's auto-detection of resources
-plink_rules = ['__default__',"merge_inputs","convert_vcfs","QCcombine_query","restore_strand","set_pheno","filter_merged","update_varIDs_and_sex"]
+plink_rules = ['__default__',"merge_inputs","convert_vcfs","QCcombine_query","restore_strand","filter_merged","update_IDs_sex_pheno"]
 if config['run_settings']['local_run'] == 'true':
     localrules: all, update_alleles_IDs, FixRef, QCcombine_query, download_refs, merge_typed_keys
 else:

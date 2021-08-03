@@ -255,7 +255,7 @@ rule mis_impute_prep: #Parse PLINK datasets by chromosome and convert to VCF for
 #TODO: add mbc filter to QC report
 rule make_report: #Final step to create a PDF report that summarizes the most relevant results.
     input: expand("{rawdata}/{rawdata}.chr{chrom}.vcf.gz", rawdata=QUERY.keys(), chrom=CHROMS)#, f"{OUT}-rulegraph.png"
-    output: f"{OUT}-report.pdf
+    output: f"{OUT}-report.pdf"
     params: input_list = ",".join(expand("{rawdata}/{rawdata}.chr20_freq.txt", rawdata=QUERY.keys()))
     run:
         with open("scripts/gather_report_data.sh", 'w') as report_cmds: #This shell script generates some ancillary data and also formats a call to render the R(markdown) with the specified arguments.
