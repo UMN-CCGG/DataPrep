@@ -72,7 +72,7 @@ First, activate the virtual environment into which snakemake was installed:
 
 Clone the parent repository to the location where you want to store the output of the pipeline.
 
-    git clone https://github.com/pmonnahan/DataPrep.git preImputeQC
+    git clone https://github.com/UMN-CCGG/DataPrep.git preImputeQC
     cd preImputeQC
     
 The critical files responsible for executing the pipeline are contained in the _./workflow_ subdirectory contained within the cloned repo.  They are: 
