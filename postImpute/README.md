@@ -57,7 +57,7 @@ Singularity settings in config.yml
 
     singularity:
       use_singularity: 'true'
-      image: '/home/pmonnaha/pmonnaha/singularity/AncestryInference.sif
+      image: '/home/araduski/shared/singularity/AncestryInference.sif
 
 
 ## Running the workflow
