@@ -193,7 +193,7 @@ rule set_pheno: #Set phenotypes
         if os.path.exists(config['query'][wildcards.rawdata]['pheno_file']):
             shell(f"{CMD_PREFIX} plink --bfile {wildcards.rawdata}/tmp/{wildcards.rawdata}-FixRef --pheno {config['query'][wildcards.rawdata]['pheno_file']} --keep-allele-order --make-bed --out {wildcards.rawdata}/{wildcards.rawdata}-FixRef-pheno")
         else:
-            shell(f"{CMD_PREFIX} plink --bfile {wildcards.rawdata}/tmp/{wildcards.rawdata}-FixRef --pheno {QUERY['query'][wildcards.rawdata]['data']}.bim --mpheno 4 --keep-allele-order --make-bed --out {wildcards.rawdata}/{wildcards.rawdata}-FixRef-pheno")
+            shell(f"{CMD_PREFIX} plink --bfile {wildcards.rawdata}/tmp/{wildcards.rawdata}-FixRef --pheno {config['query'][wildcards.rawdata]['data']}.bim --mpheno 4 --keep-allele-order --make-bed --out {wildcards.rawdata}/{wildcards.rawdata}-FixRef-pheno")
 
 rule set_sex: #Set sex
     input: "{rawdata}/{rawdata}-FixRef-pheno.bed"
