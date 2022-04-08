@@ -202,7 +202,7 @@ rule set_sex: #Set sex
         if os.path.exists(config['query'][wildcards.rawdata]['sex_file']):
             shell(f"{CMD_PREFIX} plink --bfile {wildcards.rawdata}/{wildcards.rawdata}-FixRef-pheno --update-sex {config['query'][wildcards.rawdata]['sex_file']} --keep-allele-order --make-bed --out {wildcards.rawdata}/{wildcards.rawdata}-FixRef-pheno-sex")
         else:
-            shell(f"{CMD_PREFIX} plink --bfile {wildcards.rawdata}/{wildcards.rawdata}-FixRef-pheno --pheno {QUERY['query'][wildcards.rawdata]['data']}.bim --mpheno 3 --keep-allele-order --make-bed --out {wildcards.rawdata}/{wildcards.rawdata}-FixRef-pheno-sex")
+            shell(f"{CMD_PREFIX} plink --bfile {wildcards.rawdata}/{wildcards.rawdata}-FixRef-pheno --pheno {config['query'][wildcards.rawdata]['data']}.bim --mpheno 3 --keep-allele-order --make-bed --out {wildcards.rawdata}/{wildcards.rawdata}-FixRef-pheno-sex")
 
 rule QCcombine_query: #Run various QC steps
     input: "{rawdata}/{rawdata}-FixRef-pheno-sex.bed"
