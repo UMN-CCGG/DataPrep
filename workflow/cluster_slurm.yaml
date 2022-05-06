@@ -7,7 +7,7 @@ __default__:
   mem: "5G"
   ntasks: "1"
   nodes: "1"
-  mail-user: "pmonnaha@umn.edu"
+  mail-user: "araduski@umn.edu"
   mail-type: "NONE"
   o: 'OandE/{rule}.{wildcards}.out'
   e: 'OandE/{rule}.{wildcards}.err'
