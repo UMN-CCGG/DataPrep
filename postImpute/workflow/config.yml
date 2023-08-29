@@ -1,12 +1,12 @@
 #Modify all lines indicated with MODIFY
-outname: "CCRLP"
+outname: "studyname" #MODIFY
 query:
   "ccrlp": "/PATH/TO/DIRECTORY/CONTAINING/IMPUTATION/OUTPUT/" # MODIFY
 phenotype_data: # Must specify a phenotype file where first column is sample ID (must match those in imputed VCFs) and phenotype is second column
   pheno_file: "/PATH/TO/FILE/CONTAINING/PHENOTYPE_DATA" #MODIFY
   sex_file: "/PATH/TO/FILE/CONTAINING/SEX_DATA" #MODIFY
 singularity:
-  image: '/PATH/TO/SINGULARITY/IMAGE/AncestryInference.sif' # MODIFY
+  image: '/home/araduski/shared/singularity/AncestryInference.sif' # MODIFY
   module: 'module load singularity'
   code: 'scripts/'
   use_singularity: 'true'
