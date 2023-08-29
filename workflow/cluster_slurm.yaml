@@ -1,13 +1,13 @@
 #Modify lines indicated with MODIFY
 __default__:
-  A: 'spectorl' #MODIFY.  This should be name of your account with your HPC system
+  A: 'araduski' #MODIFY.  This should be name of your account with your HPC system
   job-name: "{rule}"
   p: 'ccgg'
   time: "4:00:00"
   mem: "5G"
   ntasks: "1"
   nodes: "1"
-  mail-user: "araduski@umn.edu"
+  mail-user: "and06841@umn.edu"
   mail-type: "NONE"
   o: 'OandE/{rule}.{wildcards}.out'
   e: 'OandE/{rule}.{wildcards}.err'
