@@ -3,8 +3,8 @@ __default__:
   A: 'araduski' #MODIFY.  This should be name of your account with your HPC system
   p: 'ccgg'
   job-name: "{rule}"
-  time: "4:00:00"
-  mem: "5G"
+  time: "24:00:00"
+  mem: "24G"
   ntasks: "1"
   nodes: "1"
   mail-user: "and06841@umn.edu"
@@ -14,7 +14,7 @@ __default__:
 
 QCcombine_query:
   time: "12:00:00"
-  mem: "16G"
+  mem: "64G"
   ntasks: "1"
   nodes: "1"
 
@@ -48,7 +48,7 @@ merge_vcfs:
 
 merge_inputs:
   time: '4:00:00'
-  mem: '32G'
+  mem: '35G'
   ntasks: "1"
 
 
