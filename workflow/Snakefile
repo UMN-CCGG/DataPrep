@@ -32,9 +32,11 @@ if config['FixRef'] == "true":
         REFASTA = f"{os.getcwd()}/RefAnnotationData/{os.path.basename(REFASTA)}"
         REFVCF = f"{os.getcwd()}/RefAnnotationData/{os.path.basename(REFVCF)}"
     else:
-        assert (REFASTA != "none" and REFVCF != "none"), "Must provide a reference fasta and VCF in workflow/config.yml file"
-        assert os.path.exists(config['reference']['refFasta']), f"Did not find reference fasta: {config['reference']['refFasta']}"
-        assert os.path.exists(config['reference']['refVCF']), f"Did not find reference VCF: {config['reference']['refVCF']}"
+        assert (REFASTA != "none" and REFVCF != "none"), "Must provide a reference fasta and VCF for build 37 in workflow/config.yml file"
+        assert os.path.exists(config['reference']['refFasta37']), f"Did not find reference fasta for build 37: {config['reference']['refFasta37']}"
+        assert os.path.exists(config['reference']['refVCF37']), f"Did not find reference VCF for build 37: {config['reference']['refVCF37']}"
+        assert os.path.exists(config['reference']['refFasta38']), f"Did not find reference fasta for build 38: {config['reference']['refFasta38']}"
+        assert os.path.exists(config['reference']['refVCF38']), f"Did not find reference VCF for build 38: {config['reference']['refVCF38']}"
 
 # Format commands and bind paths if using singularity.
 if config['singularity']['use_singularity'] == 'true' and config['singularity']['image'] != "none":
