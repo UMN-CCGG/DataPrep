@@ -5,8 +5,7 @@ build: "38" # Either 37 or 38
 query: #!!ONLY USE TEXT AND NUMBERS FOR NAMING DATASETS.  List one or more datasets to be QCed via format demonstrated below.
   "dataset1":
     data: "PATH_TO_PLINK_PREFIX"
-    chrom_key: "/home/araduski/araduski/misc/PlinkChrRename.txt" # Required.  this is also downloaded to accessory directory upon cloning repo
-    chrom_key38: "/home/araduski/araduski/misc/PlinkChrRename_hg38.txt"
+    chrom_key: "/home/araduski/araduski/misc/PlinkChrRename_hg38.txt" # Change to "/home/araduski/araduski/misc/PlinkChrRename_hg38.txt" for hg38 build data
     allele_key: "PATH_TO_FILE_WITH_ACGT_SPECIFCATION" # Used for renaming A/B allele specification to ACGT specification (see PLINK documentation for format).  Set to 'none' if data already in ACGT
     ID_key: "PATH_TO_FILE_WITH_rsIDs" #Used to relabel markers with the rsID (see PLINK documentation for format).  Set to 'none' if rsIDs already present
     flip_key: "PATH_TO_FILE_WITH_rsIDs_TO_FLIP" #File with rsIDs to flip.  Typically retrieved from CSV file for array.  Set to 'none' if you are certain that strand is specified correctly.
@@ -14,8 +13,7 @@ query: #!!ONLY USE TEXT AND NUMBERS FOR NAMING DATASETS.  List one or more datas
     sex_file: "PATH_TO_FILE_WITH_SEX_INFO" #If sexes are already specified or are not available, set this to 'none'. Otherwise, format according to PLINK --update-sex.
   "dataset2":
     data: "PATH_TO_PLINK_PREFIX"
-    chrom_key: "/home/araduski/araduski/misc/PlinkChrRename.txt" # this is also downloaded to accessory directory upon cloning repo
-    chrom_key38: "/home/araduski/araduski/misc/PlinkChrRename_hg38.txt"
+    chrom_key: "/home/araduski/araduski/misc/PlinkChrRename_hg38.txt" # Change to "/home/araduski/araduski/misc/PlinkChrRename_hg38.txt" for hg38 build data 
     allele_key: "PATH_TO_FILE_WITH_ACGT_SPECIFCATION" # Used for renaming A/B allele specification to ACGT specification (see PLINK documentation for format).  Set to 'none' if data already in ACGT
     ID_key: "PATH_TO_FILE_WITH_rsIDs" #Used to relabel markers with the rsID (see PLINK documentation for format).  Set to 'none' if rsIDs already present
     flip_key: "PATH_TO_FILE_WITH_rsIDs_TO_FLIP" #File with rsIDs to flip.  Typically retrieved from CSV file for array.  Set to 'none' if you are certain that strand is specified correctly.
