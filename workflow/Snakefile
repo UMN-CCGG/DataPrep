@@ -21,8 +21,12 @@ BCFTOOLS = config['bcftools']['executable']
 PYTHON = config['python']
 
 # Is reference info provided in config file or do we download?
-REFASTA = config['reference']['refFasta']
-REFVCF = config['reference']['refVCF']
+if config['build'] == "37":
+    REFASTA = config['reference']['refFasta37']
+    REFVCF = config['reference']['refVCF37']
+if config['build'] == "38":
+    REFASTA = config['reference']['refFasta38']
+    REFVCF = config['reference']['refVCF38']
 if config['FixRef'] == "true":
     if config['reference']['download'] == 'true':
         REFASTA = f"{os.getcwd()}/RefAnnotationData/{os.path.basename(REFASTA)}"
