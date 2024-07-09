@@ -160,18 +160,25 @@ rule cross_map: #Convert coordinates, if requested in config
         else: #Just copy (and index) the input files if not converting coords
             shell(f"cp {{params.in_pre}}/chr{{wildcards.chrom}}.dose.vcf.gz {{output}}; {CMD_PREFIX} tabix {{params.out_pre}}.gz")
 
-rule typed_key: #Extract the genotyped and genotyped-only sites as well as the SNPs with low imputation info (aka R-squared)
+rule typed_key:
     output: f"accessory/{{rawdata}}_typed_key.txt", f"accessory/{{rawdata}}_lowImptInfo.txt"
     params:
         in_pre = lambda wildcards: QUERY[wildcards.rawdata],
-        awk_string1 = """awk \'{printf(\"%s\\ttyped\\n\", $1)}\'""", #formatting printing for typed & imputed rows
-        awk_string2 = """awk \'{printf(\"%s\\ttypedOnly\\n\", $1)}\'""", #formatting printing of typed-only rows
-        awk_string3 = """awk \'{if($7 < """ + config['QC']['Rsq_threshold'] + """ && $4 > """ + config['QC']['maf'] + """) print $1}\'""" #Format string to pull out SNPs with low imputation info, but leave behind the rare SNPs we'd end up filtering anyways to avoid large file sizes
+        rsq_threshold = config['QC']['Rsq_threshold'],
+        maf_threshold = config['QC']['maf']
     shell:
-        f"{CMD_PREFIX} zgrep Genotyped {{params.in_pre}}/chr*.info.gz | {{params.awk_string1}} | grep -v -f {{params.in_pre}}/typed-only.txt | "
-        f"grep -v SNP | cut -d \':\' -f 2- > accessory/{{wildcards.rawdata}}_typed_key.txt || true; " #Retrieve SNPs that were genotyped & imputed
-        f"{CMD_PREFIX} {{params.awk_string2}} {{params.in_pre}}/typed-only.txt | grep -v Position >> accessory/{{wildcards.rawdata}}_typed_key.txt || true; " #Grab the genotyped-only SNPs
-        f"{CMD_PREFIX} zcat {{params.in_pre}}/chr*.info.gz | {{params.awk_string3}} > accessory/{{wildcards.rawdata}}_lowImptInfo.txt" #Get low info SNPs
+        f"""
+        > accessory/{{wildcards.rawdata}}_typed_key.txt
+        > accessory/{{wildcards.rawdata}}_lowImptInfo.txt
+
+        module load bcftools
+
+        for file in {{params.in_pre}}/chr*.info.gz; do
+            bcftools view -i 'TYPED==1 & IMPUTED==1' "$file" | bcftools query -f '%CHROM:%POS:%REF:%ALT \t typed\n' >> accessory/{{wildcards.rawdata}}_typed_key.txt
+            bcftools view -i 'TYPED==1 & IMPUTED==0' "$file" | bcftools query -f '%CHROM:%POS:%REF:%ALT \t typedOnly\n' >> accessory/{{wildcards.rawdata}}_typed_key.txt
+            bcftools view -i 'INFO/R2 < {{params.rsq_threshold}} & INFO/MAF > {{params.maf_threshold}}' "$file" | bcftools query -f '%CHROM:%POS:%REF:%ALT\n' >> accessory/{{wildcards.rawdata}}_lowImptInfo.txt
+        done
+        """
 
 rule merge_typed_keys: #Merge together the typed-keys for the different input datasets.
     input: expand(f"accessory/{{rawdata}}_typed_key.txt", rawdata=QUERY.keys())
