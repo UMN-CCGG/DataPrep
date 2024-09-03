@@ -254,13 +254,13 @@ rule merge_vcfs:  #This will maintain original SNP ids produced by imputation.  
                          f"tabix merged_vcfs/{OUT}_chr{wildcards.chrom}.vcf.gz")
         shell(f"{CMD_PREFIX} sh merged_vcfs/chr{{wildcards.chrom}}.sh")
 
-rule update_IDs_sex_pheno: #Update variant IDs, sex, and phenotypes.  New IDs are just chrom:pos where pos is in converted coords (if requested)
-    input: "{rawdata}/{rawdata}_info{chrom}.bed", "accessory/sex.txt", "accessory/pheno_file.txt"
-    output: "{rawdata}/{rawdata}-varIDs_chr{chrom}.bed"
-    shell: """
-    {CMD_PREFIX} awk '{{printf("%s\\t%s:%s\\n",$2,$1,$4)}}' {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}.bim > {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}_varIDs.txt; 
-    {CMD_PREFIX} plink --bfile {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom} --keep-allele-order --update-name {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}_varIDs.txt --update-sex accessory/sex.txt --make-bed --out {wildcards.rawdata}/{wildcards.rawdata}-varIDs_tmp_chr{wildcards.chrom}""" + f" {plnk_rsrc(rule, plink_run_specs)};" + """
-    {CMD_PREFIX} plink --bfile {wildcards.rawdata}/{wildcards.rawdata}-varIDs_tmp_chr{wildcards.chrom} --pheno accessory/pheno_file.txt --keep-allele-order --make-bed --out {wildcards.rawdata}/{wildcards.rawdata}-varIDs_chr{wildcards.chrom}""" + f" {plnk_rsrc(rule, plink_run_specs)}; rm {{wildcards.rawdata}}/{{wildcards.rawdata}}-varIDs_tmp_chr{{wildcards.chrom}}*"
+rule update_IDs_sex_pheno: #Update variant IDs, sex, and phenotypes.  As of 01/2024 TOPDMED provides rsid as IDs, when available.  IDs for this workflow are thus rsids, if available, or chrom:pos:ref:alt, if rsid are unavailable. chrom:pos are in hg38 coordinates
+        input: "{rawdata}/{rawdata}_info{chrom}.bed", "accessory/sex.txt", "accessory/pheno_file.txt"
+        output: "{rawdata}/{rawdata}-varIDs_chr{chrom}.bed"
+        shell: """
+        {CMD_PREFIX} awk '{{if($2 == ".") {{printf("%s\\t%s:%s:%s:%s\\t%s\\t%s\\t%s\\t%s\\n",$1,$1,$4,$5,$6,$3,$4,$5,$6)}} else {{print $0}}}}' {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}.bim > {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}.bim2; mv {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}.bim2 {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}.bim;
+        {CMD_PREFIX} plink --bfile {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom} --keep-allele-order --update-sex accessory/sex.txt --make-bed --out {wildcards.rawdata}/{wildcards.rawdata}-varIDs_tmp_chr{wildcards.chrom}""" + f" {plnk_rsrc(rule, plink_run_specs)};" + """
+        {CMD_PREFIX} plink --bfile {wildcards.rawdata}/{wildcards.rawdata}-varIDs_tmp_chr{wildcards.chrom} --pheno accessory/pheno_file.txt --keep-allele-order --make-bed --out {wildcards.rawdata}/{wildcards.rawdata}-varIDs_chr{wildcards.chrom}""" + f" {plnk_rsrc(rule, plink_run_specs)}; rm {{wildcards.rawdata}}/{{wildcards.rawdata}}-varIDs_tmp_chr{{wildcards.chrom}}*"
 
 rule QCcombine_query: #Primary QC step that filters for duplicates, missingness, hwe, and associations between missingness and sex and missigness and case/control status.
     input: "{rawdata}/{rawdata}-varIDs_chr{chrom}.bed"
