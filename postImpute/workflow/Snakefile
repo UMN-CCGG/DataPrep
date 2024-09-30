@@ -61,7 +61,7 @@ if CHROMS == 'all':
 
 # Run locally or submit to cluster depending on config.yml
 plink_run_specs = {'__default__': ""} # Set default to empty string in case of local run.  i.e. default to plink's auto-detection of resources
-plink_rules = ['__default__',"merge_inputs","convert_vcfs","QCcombine_query","restore_strand","filter_merged","update_IDs_sex_pheno"]
+plink_rules = ['__default__',"merge_inputs","convert_vcfs","QCcombine_query","restore_strand","set_pheno","filter_merged","update_varIDs_and_sex"]
 if config['run_settings']['local_run'] == 'true':
     localrules: all, update_alleles_IDs, FixRef, QCcombine_query, download_refs, merge_typed_keys
 else:
@@ -160,25 +160,18 @@ rule cross_map: #Convert coordinates, if requested in config
         else: #Just copy (and index) the input files if not converting coords
             shell(f"cp {{params.in_pre}}/chr{{wildcards.chrom}}.dose.vcf.gz {{output}}; {CMD_PREFIX} tabix {{params.out_pre}}.gz")
 
-rule typed_key:
+rule typed_key: #Extract the genotyped and genotyped-only sites as well as the SNPs with low imputation info (aka R-squared)
     output: f"accessory/{{rawdata}}_typed_key.txt", f"accessory/{{rawdata}}_lowImptInfo.txt"
     params:
         in_pre = lambda wildcards: QUERY[wildcards.rawdata],
-        rsq_threshold = config['QC']['Rsq_threshold'],
-        maf_threshold = config['QC']['maf']
+        awk_string1 = """awk \'{printf(\"%s\\ttyped\\n\", $1)}\'""", #formatting printing for typed & imputed rows
+        awk_string2 = """awk \'{printf(\"%s\\ttypedOnly\\n\", $1)}\'""", #formatting printing of typed-only rows
+        awk_string3 = """awk \'{if($7 < """ + config['QC']['Rsq_threshold'] + """ && $4 > """ + config['QC']['maf'] + """) print $1}\'""" #Format string to pull out SNPs with low imputation info, but leave behind the rare SNPs we'd end up filtering anyways to avoid large file sizes
     shell:
-        f"""
-        > accessory/{{wildcards.rawdata}}_typed_key.txt
-        > accessory/{{wildcards.rawdata}}_lowImptInfo.txt
-
-        module load bcftools
-
-        for file in {{params.in_pre}}/chr*.info.gz; do
-            bcftools view -i 'TYPED==1 & IMPUTED==1' "$file" | bcftools query -f '%CHROM:%POS:%REF:%ALT \t typed\n' >> accessory/{{wildcards.rawdata}}_typed_key.txt
-            bcftools view -i 'TYPED==1 & IMPUTED==0' "$file" | bcftools query -f '%CHROM:%POS:%REF:%ALT \t typedOnly\n' >> accessory/{{wildcards.rawdata}}_typed_key.txt
-            bcftools view -i 'INFO/R2 < {{params.rsq_threshold}} & INFO/MAF > {{params.maf_threshold}}' "$file" | bcftools query -f '%CHROM:%POS:%REF:%ALT\n' >> accessory/{{wildcards.rawdata}}_lowImptInfo.txt
-        done
-        """
+        f"{CMD_PREFIX} zgrep Genotyped {{params.in_pre}}/chr*.info.gz | {{params.awk_string1}} | grep -v -f {{params.in_pre}}/typed-only.txt | "
+        f"grep -v SNP | cut -d \':\' -f 2- > accessory/{{wildcards.rawdata}}_typed_key.txt || true; " #Retrieve SNPs that were genotyped & imputed
+        f"{CMD_PREFIX} {{params.awk_string2}} {{params.in_pre}}/typed-only.txt | grep -v Position >> accessory/{{wildcards.rawdata}}_typed_key.txt || true; " #Grab the genotyped-only SNPs
+        f"{CMD_PREFIX} zcat {{params.in_pre}}/chr*.info.gz | {{params.awk_string3}} > accessory/{{wildcards.rawdata}}_lowImptInfo.txt" #Get low info SNPs
 
 rule merge_typed_keys: #Merge together the typed-keys for the different input datasets.
     input: expand(f"accessory/{{rawdata}}_typed_key.txt", rawdata=QUERY.keys())
@@ -255,12 +248,12 @@ rule merge_vcfs:  #This will maintain original SNP ids produced by imputation.  
         shell(f"{CMD_PREFIX} sh merged_vcfs/chr{{wildcards.chrom}}.sh")
 
 rule update_IDs_sex_pheno: #Update variant IDs, sex, and phenotypes.  As of 01/2024 TOPDMED provides rsid as IDs, when available.  IDs for this workflow are thus rsids, if available, or chrom:pos:ref:alt, if rsid are unavailable. chrom:pos are in hg38 coordinates
-        input: "{rawdata}/{rawdata}_info{chrom}.bed", "accessory/sex.txt", "accessory/pheno_file.txt"
-        output: "{rawdata}/{rawdata}-varIDs_chr{chrom}.bed"
-        shell: """
-        {CMD_PREFIX} awk '{{if($2 == ".") {{printf("%s\\t%s:%s:%s:%s\\t%s\\t%s\\t%s\\t%s\\n",$1,$1,$4,$5,$6,$3,$4,$5,$6)}} else {{print $0}}}}' {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}.bim > {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}.bim2; mv {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}.bim2 {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}.bim;
-        {CMD_PREFIX} plink --bfile {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom} --keep-allele-order --update-sex accessory/sex.txt --make-bed --out {wildcards.rawdata}/{wildcards.rawdata}-varIDs_tmp_chr{wildcards.chrom}""" + f" {plnk_rsrc(rule, plink_run_specs)};" + """
-        {CMD_PREFIX} plink --bfile {wildcards.rawdata}/{wildcards.rawdata}-varIDs_tmp_chr{wildcards.chrom} --pheno accessory/pheno_file.txt --keep-allele-order --make-bed --out {wildcards.rawdata}/{wildcards.rawdata}-varIDs_chr{wildcards.chrom}""" + f" {plnk_rsrc(rule, plink_run_specs)}; rm {{wildcards.rawdata}}/{{wildcards.rawdata}}-varIDs_tmp_chr{{wildcards.chrom}}*"
+	input: "{rawdata}/{rawdata}_info{chrom}.bed", "accessory/sex.txt", "accessory/pheno_file.txt"
+	output: "{rawdata}/{rawdata}-varIDs_chr{chrom}.bed"
+	shell: """
+	{CMD_PREFIX} awk '{{if($2 == ".") {{printf("%s\\t%s:%s:%s:%s\\t%s\\t%s\\t%s\\t%s\\n",$1,$1,$4,$5,$6,$3,$4,$5,$6)}} else {{print $0}}}}' {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}.bim > {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}.bim2; mv {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}.bim2 {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom}.bim;
+	{CMD_PREFIX} plink --bfile {wildcards.rawdata}/{wildcards.rawdata}_info{wildcards.chrom} --keep-allele-order --update-sex accessory/sex.txt --make-bed --out {wildcards.rawdata}/{wildcards.rawdata}-varIDs_tmp_chr{wildcards.chrom}""" + f" {plnk_rsrc(rule, plink_run_specs)};" + """
+	{CMD_PREFIX} plink --bfile {wildcards.rawdata}/{wildcards.rawdata}-varIDs_tmp_chr{wildcards.chrom} --pheno accessory/pheno_file.txt --keep-allele-order --make-bed --out {wildcards.rawdata}/{wildcards.rawdata}-varIDs_chr{wildcards.chrom}""" + f" {plnk_rsrc(rule, plink_run_specs)}; rm {{wildcards.rawdata}}/{{wildcards.rawdata}}-varIDs_tmp_chr{{wildcards.chrom}}*"
 
 rule QCcombine_query: #Primary QC step that filters for duplicates, missingness, hwe, and associations between missingness and sex and missigness and case/control status.
     input: "{rawdata}/{rawdata}-varIDs_chr{chrom}.bed"
@@ -309,16 +302,17 @@ rule filter_merged: #Apply MAF filter to merged datasets.
     output: f"{OUT}-QC_chr{{chrom}}.bed", f"{OUT}-QC_chr{{chrom}}.bim"
     shell: f"{CMD_PREFIX} plink --bfile {OUT}_chr{{wildcards.chrom}} --maf {config['QC']['maf']} --keep-allele-order --make-bed --out {OUT}-QC_chr{{wildcards.chrom}} {plnk_rsrc(rule, plink_run_specs)}"
 
-rule filter_dosage: #As opposed to running the dosage data through preceeding QC steps, just use the SNP IDs from merged QCed data (filter_merged rule). This step also updates sex and phenotypes and relabels IDs in the plink2 dosage files
+rule filter_dosage:
     input: f"{{rawdata}}/{{rawdata}}_dos{{chrom}}.pgen", f"{OUT}-QC_chr{{chrom}}.bim"
     output: f"{{rawdata}}/{{rawdata}}_QCdos{{chrom}}.pgen", f"{{rawdata}}/{{rawdata}}_QCdos{{chrom}}.vcf.gz"
-    shell: f"cut -f 2 {OUT}-QC_chr{{wildcards.chrom}}.bim | sed 's/23:/X:/' > accessory/snps.dos.{{wildcards.chrom}};" #Grab SNP list from merged QCed data
-            f"{CMD_PREFIX} plink2 --pfile {{wildcards.rawdata}}/{{wildcards.rawdata}}_dos{{wildcards.chrom}} " #Filter SNPs, relabel IDs, & update sex and phenotypes.
-            f"--extract accessory/snps.dos.{{wildcards.chrom}} --set-all-var-ids @:# --update-sex accessory/sex.txt --pheno accessory/pheno_file.txt --make-pgen "
-            f"--out {{wildcards.rawdata}}/{{wildcards.rawdata}}_QCdos{{wildcards.chrom}} {plnk_rsrc(rule, plink_run_specs)}; "
-            f"{CMD_PREFIX} plink2 --pfile {{wildcards.rawdata}}/{{wildcards.rawdata}}_QCdos{{wildcards.chrom}} --export vcf vcf-dosage=HDS-force --out {{wildcards.rawdata}}/{{wildcards.rawdata}}_QCdos{{wildcards.chrom}} {plnk_rsrc(rule, plink_run_specs)};"
-            f"{CMD_PREFIX} bgzip {{wildcards.rawdata}}/{{wildcards.rawdata}}_QCdos{{wildcards.chrom}}.vcf; "
-            f"{CMD_PREFIX} tabix {{wildcards.rawdata}}/{{wildcards.rawdata}}_QCdos{{wildcards.chrom}}.vcf.gz" #Convert PLINK2 dosage files to dosage VCFs
+    shell: f"cut -f 2 {OUT}-QC_chr{{wildcards.chrom}}.bim | sed 's/23:/X:/' > accessory/snps.dos.{{wildcards.chrom}} ;" #Grab SNP list from merged QCed data
+			f"grep ^# {{wildcards.rawdata}}/{{wildcards.rawdata}}_dos{{wildcards.chrom}}.pvar > accessory/{{wildcards.rawdata}}_dos{{wildcards.chrom}}.pvar2 ; "# Edit .pvar file to account for change in ID names
+			f"grep -v ^# {{wildcards.rawdata}}/{{wildcards.rawdata}}_dos{{wildcards.chrom}}.pvar | awk '{{if($3 == \".\") {{printf(\"%s\\t%s\\t%s:%s:%s:%s\\t%s\\t%s\\t%s\\n\",$1,$2,$1,$2,$4,$5,$4,$5,$6)}} else{{print $0}}}}' >> {{wildcards.rawdata}}/{{wildcards.rawdata}}_dos{{wildcards.chrom}}.pvar2; "
+			f"mv {{wildcards.rawdata}}/{{wildcards.rawdata}}_dos{{wildcards.chrom}}.pvar2 {{wildcards.rawdata}}/{{wildcards.rawdata}}_dos{{wildcards.chrom}}.pvar ;" 
+			f"{CMD_PREFIX} plink2 --pfile {{wildcards.rawdata}}/{{wildcards.rawdata}}_dos{{wildcards.chrom}} --extract accessory/snps.dos.{{wildcards.chrom}} --update-sex accessory/sex.txt --pheno accessory/pheno_file.txt --make-pgen --out {{wildcards.rawdata}}/{{wildcards.rawdata}}_QCdos{{wildcards.chrom}} {plnk_rsrc(rule, plink_run_specs)}; " #Filter SNPs, relabel IDs, & update sex and phenotypes.
+			f"{CMD_PREFIX} plink2 --pfile {{wildcards.rawdata}}/{{wildcards.rawdata}}_QCdos{{wildcards.chrom}} --export vcf vcf-dosage=HDS-force --out {{wildcards.rawdata}}/{{wildcards.rawdata}}_QCdos{{wildcards.chrom}} {plnk_rsrc(rule, plink_run_specs)};"
+			f"{CMD_PREFIX} bgzip {{wildcards.rawdata}}/{{wildcards.rawdata}}_QCdos{{wildcards.chrom}}.vcf; "
+			f"{CMD_PREFIX} tabix {{wildcards.rawdata}}/{{wildcards.rawdata}}_QCdos{{wildcards.chrom}}.vcf.gz" #Convert PLINK2 dosage files to dosage VCFs
 
 rule merge_dosage: #Merge the results from filter_dosage
     input: expand("{rawdata}/{rawdata}_QCdos{{chrom}}.vcf.gz", rawdata=QUERY.keys()), f"{OUT}-QC_chr{{chrom}}.bim"
@@ -426,6 +420,4 @@ rule extract_snpList: #if a snp_list was provided, this rule will pull the SNPs 
             shell(f"{CMD_PREFIX} plink --merge-list snpExtract/master_merge.txt --allow-no-sex --keep-allele-order --make-bed --out {OUT}.snps")
         else:
             print("Must provide a valid path to a snp list (tab-delimited text file with chromosome and position) file in workflow/config.yml at snp_list")
-
-
 
