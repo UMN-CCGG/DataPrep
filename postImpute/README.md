@@ -34,7 +34,7 @@ The pipeline is coordinated and run on an HPC (or locally) using _Snakemake_.  T
   
     module load python3/3.6.3_anaconda5.0.1
     conda install -c conda-forge mamba
-    mamba create -c conda-forge -c bioconda -n <your_environment_name> snakemake=7.31.0
+    mamba create -c conda-forge -c bioconda -n <your_environment_name> snakemake=6.2.1
   
 This will create a new virtual environment and install `snakemake`.  Then, activate this environment and perform following installations:
 
