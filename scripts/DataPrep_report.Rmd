@@ -43,6 +43,8 @@ fix <- read.table(params$FixRef_file, col.names = paste0("V",seq_len(4)), fill =
 rulegraph_file <- params$rulegraph_file
 ref <- read.table(params$ref_freqs)
 ref %<>% mutate(freq=V4,chrom=V1,pos=V2,ID=V3) %>% select(-c(V1,V2,V3,V4))
+ch_38_check = any(ref$ID == "rs374311122" & ref$pos == 82995)
+ref = ref %>% mutate(chrom = ifelse(ch_38_check, "chr20", chrom))
 # dat_freq is composed of multiple datasets with differing numbers of rows.
 dat_files = str_split(params$dat_freq, ",")
 yaml <- read_yaml(params$config_file)
