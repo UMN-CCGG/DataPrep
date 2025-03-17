@@ -255,8 +255,16 @@ rule mis_impute_prep: #Parse PLINK datasets by chromosome and convert to VCF for
     params:
         pre = "{rawdata}/{rawdata}"
     run:
-        shell(f"{CMD_PREFIX} plink --bfile {{params.pre}}-QC-Ref --chr {{wildcards.chrom}} --recode vcf-iid --keep-allele-order --out {{params.pre}}.chr{{wildcards.chrom}} {plnk_rsrc(rule, plink_run_specs)}; "
-              f" {CMD_PREFIX} bcftools sort -Oz -o {{params.pre}}.chr{{wildcards.chrom}}.vcf.gz {{params.pre}}.chr{{wildcards.chrom}}.vcf; rm {{params.pre}}.chr{{wildcards.chrom}}.vcf")
+        if config["build"] == "38":
+            shell(f" module load bcftools; "
+                  f" {CMD_PREFIX} plink --bfile {{params.pre}}-QC-Ref --chr {{wildcards.chrom}} --recode vcf-iid --keep-allele-order --out {{params.pre}}.chr{{wildcards.chrom}} {plnk_rsrc(rule, plink_run_specs)}; "
+                  f" {CMD_PREFIX} bcftools sort {{params.pre}}.chr{{wildcards.chrom}}.vcf | bcftools annotate --rename-chrs accessory/bcftoolsChrRename.txt -Oz -o {{params.pre}}.chr{{wildcards.chrom}}.vcf.gz; "
+                  f" rm {{params.pre}}.chr{{wildcards.chrom}}.vcf")
+        else:
+            shell(f" module load bcftools; "
+                  f" {CMD_PREFIX} plink --bfile {{params.pre}}-QC-Ref --chr {{wildcards.chrom}} --recode vcf-iid --keep-allele-order --out {{params.pre}}.chr{{wildcards.chrom}} {plnk_rsrc(rule, plink_run_specs)}; "
+                  f" {CMD_PREFIX} bcftools sort -Oz -o {{params.pre}}.chr{{wildcards.chrom}}.vcf.gz {{params.pre}}.chr{{wildcards.chrom}}.vcf; "
+                  f" rm {{params.pre}}.chr{{wildcards.chrom}}.vcf")
 
 #TODO: add mbc filter to QC report
 rule make_report: #Final step to create a PDF report that summarizes the most relevant results.
