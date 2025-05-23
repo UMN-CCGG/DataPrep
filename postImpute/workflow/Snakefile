@@ -85,6 +85,7 @@ def get_all_inputs(wildcards):
     input_list += expand(f"accessory/{{rawdata}}_lowImptInfo_chr{{chrom}}.txt", rawdata=QUERY.keys(), chrom=CHROMS)
     input_list += expand(f"accessory/{{rawdata}}_typed_key.txt", rawdata=QUERY.keys())
     input_list += expand(f"accessory/{{rawdata}}_lowImptInfo.txt", rawdata=QUERY.keys())
+    input_list += expand(f"{{rawdata}}/rsid_chr{{chrom}}.info.gz", rawdata=QUERY.keys(), chrom=CHROMS)
     return(input_list)
 
 def get_snpList_input(wildcards): #Determine input files based on chromosomes present in 'snp_list' in config file
@@ -169,19 +170,18 @@ rule update_nonrsids:
     input:
         "{rawdata}/{rawdata}_chr{chrom}.vcf.gz"
     output:
-        "{rawdata}/{rawdata}_upd_chr{chrom}.vcf.gz"
+        "{rawdata}/{rawdata}_upd_chr{chrom}.vcf.gz", "{rawdata}/rsid_chr{chrom}.info.gz"
     params:
-        awk_string1 = """awk 'BEGIN {OFS="\t"} /^#/ {print; next} {if ($3 == ".") $3 = $1":"$2":"$4":"$5; print}'""",
-        out_pre = f"{{rawdata}}/{{rawdata}}_upd_chr{{chrom}}.vcf"
+    	in_pre = lambda wildcards: QUERY[wildcards.rawdata]
     shell:
         """
-        {CMD_PREFIX} zcat {input} | {params.awk_string1} > {params.out_pre}
-        {CMD_PREFIX} bgzip {params.out_pre} 
-        {CMD_PREFIX} tabix {output}
+        {CMD_PREFIX} bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -Oz -o {wildcards.rawdata}/rsid_chr{wildcards.chrom}.info.gz {params.in_pre}/chr{wildcards.chrom}.info.gz 
+		{CMD_PREFIX} bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -Oz -o {wildcards.rawdata}/{wildcards.rawdata}_upd_chr{wildcards.chrom}.vcf.gz {wildcards.rawdata}/{wildcards.rawdata}_chr{wildcards.chrom}.vcf.gz && rm {input}
+        {CMD_PREFIX} tabix {wildcards.rawdata}/{wildcards.rawdata}_upd_chr{wildcards.chrom}.vcf.gz
         """
 
 rule typed_key: #Extract the genotyped and genotyped-only sites as well as the SNPs with low imputation info (aka R-squared)
-    input: "{rawdata}/{rawdata}_upd_chr{chrom}.vcf.gz"
+    input: "{rawdata}/rsid_chr{chrom}.info.gz"
     output: "accessory/{rawdata}_typed_key_chr{chrom}.txt", "accessory/{rawdata}_lowImptInfo_chr{chrom}.txt"
 	params:
 		in_pre = lambda wildcards: QUERY[wildcards.rawdata],
@@ -191,8 +191,8 @@ rule typed_key: #Extract the genotyped and genotyped-only sites as well as the S
 		maf = config["QC"]["maf"]
 	shell:
 		"""
-		{CMD_PREFIX} bcftools view -H -i 'INFO/TYPED = 1 & INFO/IMPUTED = 1' {params.in_pre}/chr{wildcards.chrom}.info.gz | {params.awk_string1} > accessory/{wildcards.rawdata}_typed_key_chr{wildcards.chrom}.txt
-		{CMD_PREFIX} bcftools view -H -i 'INFO/R2 < {params.rsq} & INFO/MAF > {params.maf}' {wildcards.rawdata}/{wildcards.rawdata}_upd_chr{wildcards.chrom}.vcf.gz | {params.awk_string2} > accessory/{wildcards.rawdata}_lowImptInfo_chr{wildcards.chrom}.txt
+		{CMD_PREFIX} bcftools view -H -i 'INFO/TYPED = 1 & INFO/IMPUTED = 1' {wildcards.rawdata}/rsid_chr{wildcards.chrom}.info.gz | {params.awk_string1} > accessory/{wildcards.rawdata}_typed_key_chr{wildcards.chrom}.txt
+		{CMD_PREFIX} bcftools view -H -i 'INFO/R2 < {params.rsq} & INFO/MAF > {params.maf}' {wildcards.rawdata}/rsid_chr{wildcards.chrom}.info.gz | {params.awk_string2} > accessory/{wildcards.rawdata}_lowImptInfo_chr{wildcards.chrom}.txt
 		"""
 		
 rule cat_typed: #concatenate chromosome level lists of snps into dataset specific list
