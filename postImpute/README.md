@@ -89,7 +89,7 @@ The entire pipeline can be executed on a local machine (not recommended) or on a
 
 However, multiple steps in the pipeline have high resource demands, and so are unlikely to be able to be run locally.  This option exists primarily for testing and troubleshooting, so the remainder of the  documentation assumes that the pipeline will be executed on an HPC.  In order to coordinate the use of the HPC, the following modifications to the snakemake command are required:
 
-    snakemake --cluster "sbatch --no-requeue --partition={cluster.p} --time={cluster.time} --mem={cluster.mem} --ntasks={threads} --nodes={cluster.nodes} --mail-user={cluster.mail-user} --mail-type={cluster.mail-type} -o {cluster.o} -e {cluster.e} -A {cluster.A}" --cluster-config workflow/cluster_yale.yaml -j 32
+    snakemake --cluster "sbatch --no-requeue --partition={cluster.p} --time={cluster.time} --mem={cluster.mem} --ntasks={threads} --nodes={cluster.nodes} --mail-user={cluster.mail-user} --mail-type={cluster.mail-type} -o {cluster.o} -e {cluster.e} -A {cluster.A}" --cluster-config workflow/cluster_slurm.yaml -j 32
 
 where -j specifies the number of jobs that can be submitted at once. 
 
