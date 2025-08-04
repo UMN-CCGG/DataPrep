@@ -152,23 +152,26 @@ rule download_refs: #Download and format chain file and fasta file for CrossMap.
 
 rule cross_map: #Convert coordinates, if requested in config
     input: CROSSFASTA, CROSSCHAIN
-    output: f"{{rawdata}}/{{rawdata}}_chr{{chrom}}.vcf.gz"
+    output: f"{{rawdata}}/{{rawdata}}_chr{{chrom}}.bcf"
     params:
         in_pre = lambda wildcards: QUERY[wildcards.rawdata], #Prefix of input files
         out_pre = f"{{rawdata}}/{{rawdata}}_chr{{chrom}}.vcf", #Output prefix
+        out_pre2 = f"{{rawdata}}/{{rawdata}}_chr{{chrom}}.bcf", #Output prefix for bcf
         awk_string = """awk \'{if($5!=\".\") print $0}\'""" #Awk command to screen variants with no ALT allele (e.g. deletions)
     threads: int(config['CrossMap']['threads'])
     run:
         if config['convert_coords'] == 'true': #Run CrossMap and filter & index results
             shell(f"{CMD_PREFIX} python {config['CrossMap']['exec']} vcf {CROSSCHAIN} {{params.in_pre}}/chr{{wildcards.chrom}}.dose.vcf.gz {CROSSFASTA} {{params.out_pre}}; "
             f"{CMD_PREFIX} {{params.awk_string}} {{params.out_pre}} | bgzip --threads {{threads}} > {{params.out_pre}}.gz; {CMD_PREFIX} tabix {{params.out_pre}}.gz; "
+            f"{CMD_PREFIX} bcftools view -Ob -o {{output}} {{params.out_pre}}.gz; {CMD_PREFIX} tabix {{params.out_pre2}}; "
             f"rm {{params.out_pre}}; {CMD_PREFIX} gzip -f {{params.out_pre}}.unmap")
-        else: #Just copy (and index) the input files if not converting coords
-            shell(f"cp {{params.in_pre}}/chr{{wildcards.chrom}}.dose.vcf.gz {{output}}; {CMD_PREFIX} tabix {{params.out_pre}}.gz")
+        else: #Just convert the vcf to a bcf (and index) the input files if not converting coords
+        	shell(f"{CMD_PREFIX} bcftools view -Ob -o {{output}} {{params.in_pre}}/chr{{wildcards.chrom}}.dose.vcf.gz; {CMD_PREFIX} tabix {{params.out_pre2}}")
+#           shell(f"cp {{params.in_pre}}/chr{{wildcards.chrom}}.dose.vcf.gz {{output}}; {CMD_PREFIX} tabix {{params.out_pre}}.gz")
             
 rule update_nonrsids:
     input:
-        "{rawdata}/{rawdata}_chr{chrom}.vcf.gz"
+        "{rawdata}/{rawdata}_chr{chrom}.bcf"
     output:
         "{rawdata}/{rawdata}_upd_chr{chrom}.vcf.gz", "{rawdata}/rsid_chr{chrom}.info.gz"
     params:
@@ -176,7 +179,7 @@ rule update_nonrsids:
     shell:
         """
         {CMD_PREFIX} bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -Oz -o {wildcards.rawdata}/rsid_chr{wildcards.chrom}.info.gz {params.in_pre}/chr{wildcards.chrom}.info.gz 
-		{CMD_PREFIX} bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -Oz -o {wildcards.rawdata}/{wildcards.rawdata}_upd_chr{wildcards.chrom}.vcf.gz {wildcards.rawdata}/{wildcards.rawdata}_chr{wildcards.chrom}.vcf.gz && rm {input}
+		{CMD_PREFIX} bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -Oz -o {wildcards.rawdata}/{wildcards.rawdata}_upd_chr{wildcards.chrom}.vcf.gz {wildcards.rawdata}/{wildcards.rawdata}_chr{wildcards.chrom}.bcf && rm {input}
         {CMD_PREFIX} tabix {wildcards.rawdata}/{wildcards.rawdata}_upd_chr{wildcards.chrom}.vcf.gz
         """
 
