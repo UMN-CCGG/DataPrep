@@ -64,7 +64,7 @@ Singularity settings in config.yml
 
 Clone the parent repository to the location where you want to store the output of the pipeline.
 
-    git clone https://github.com/pmonnahan/DataPrep.git postImputeQC
+    git clone https://github.com/UMN-CCGG/DataPrep.git postImputeQC
     
 Then, do
 
@@ -110,7 +110,7 @@ One attractive feature of _snakemake_ is its ability to keep track of the progre
 
 To run a specific part of the pipeline, do:
 
-    snakemake -R <rule_name> --cluster "sbatch --no-requeue --partition={cluster.p} --time={cluster.time} --mem={cluster.mem} --ntasks={threads} --nodes={cluster.nodes} --mail-user={cluster.mail-user} --mail-type={cluster.mail-type} -o {cluster.o} -e {cluster.e} -A {cluster.A}" --cluster-config workflow/cluster_yale.yaml -j 20 --rerun-incomplete
+    snakemake -R <rule_name> --cluster "sbatch --no-requeue --partition={cluster.p} --time={cluster.time} --mem={cluster.mem} --ntasks={threads} --nodes={cluster.nodes} --mail-user={cluster.mail-user} --mail-type={cluster.mail-type} -o {cluster.o} -e {cluster.e} -A {cluster.A}" --cluster-config workflow/cluster_slurm.yaml -j 20 --rerun-incomplete
 
 where _rule\_name_ indicates the 'rule' (i.e. job) in the Snakefile that you wish to run.  Or, you can request a specific file by providing the filename at the end of the command.  You may need to include the -F (i.e. force) if the output file already exists and you want to overwrite it.
 
